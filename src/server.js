@@ -7,7 +7,9 @@ const express = require('express');
 const cors = require('cors');
 
 const authRouter = require('./routes/authRouter');
-
+const CustomerRouter = require('./routes/Customers');
+const OrderRouter = require('./routes/Orders');
+const webOrderSyncRoutes = require('./routes/Webordersync');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 
@@ -23,6 +25,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
+app.use('/api/customers', CustomerRouter);
+app.use('/api/orders', OrderRouter);
+app.use('/api/web-orders', webOrderSyncRoutes)
 
 // Connect to MongoDB
 connectDB().catch((err) => {
