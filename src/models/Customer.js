@@ -29,7 +29,7 @@ const customerSchema = new mongoose.Schema({
 // checkPrimaryPhoneNoExistence lookup).
 customerSchema.index({ businessLoginId: 1, primaryPhone: 1 }, { unique: true });
 
-customerSchema.pre('validate', async function (next) {
+customerSchema.pre('validate', async function () {
   if (!this.customerCode) {
     // Starts at 100000 to match the existing internal numbering range
     // (#101749-style codes) already shown in the UI.
@@ -39,7 +39,6 @@ customerSchema.pre('validate', async function (next) {
   if (!this.fullName) {
     this.fullName = [this.firstName, this.lastName].filter(Boolean).join(' ')
   }
-  next()
 })
 
 module.exports = mongoose.model('Customer', customerSchema);

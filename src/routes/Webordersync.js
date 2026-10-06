@@ -1,13 +1,15 @@
 const express = require('express')
 const Customer = require('../models/Customer')
 const Order = require('../models/Order')
-const { requireWebOrderCredentials } = require('../middleware/Weborderauth')
+const { requireWebOrderCredentials } = require('../middleware/webOrderAuth')
 
 const router = express.Router()
 
 const WEB_ORDER_BATCH_LIMIT = 100
 const BUSINESS_LOGIN_ID = process.env.BUSINESS_LOGIN_ID || 'default'
 const CREATED_BY = 'WEBSITE'
+
+console.log('DEBUG Order type:', typeof Order, '| has findOne:', typeof Order.findOne, '| modelName:', Order?.modelName)
 
 /**
  * POST /api/web-orders/sync
@@ -90,7 +92,25 @@ function normalizeEntries(payload) {
 // =====================================================================
 // one order: validate -> customer -> header + items
 // =====================================================================
+// Thin safety wrapper: anything unexpected that escapes the function below
+// (a bad DB connection, a misconfigured model, etc.) becomes a failed-order
+// result instead of an unhandled rejection that would crash the whole
+// process and take every other in-flight request down with it.
 async function processWebOrder(entry) {
+  try {
+    return await processWebOrderInner(entry)
+  } catch (err) {
+    console.error('Unexpected error processing web order:', err)
+    return {
+      order_id: String(entry?.order?.order_id || '').trim(),
+      external_customer_id: String(entry?.customer?.external_customer_id || '').trim(),
+      status: 'UNEXPECTED_ERROR',
+      message: err.message || 'Unexpected server error',
+    }
+  }
+}
+
+async function processWebOrderInner(entry) {
   const customer = entry.customer || {}
   const order = entry.order || {}
 
@@ -115,6 +135,7 @@ async function processWebOrder(entry) {
   }
 
   // same order sent twice -> don't store it again
+console.log('DEBUG Order type:', typeof Order, '| has findOne:', typeof Order.findOne, '| modelName:', Order?.modelName)
   const existingOrder = await Order.findOne({ businessLoginId: BUSINESS_LOGIN_ID, orderId })
   if (existingOrder) {
     return {
